@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+  
+  
+  <link rel="stylesheet" media="all" href="/lib/Han/dist/han.min.css?v=3.3">
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.2" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="MySQL,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="污力大熊的博客" type="application/atom+xml">
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico?v=5.1.2">
+
+
+
+
+
+
+<meta name="description" content="这两个都是自己在实际操作上遇到的具体问题，很常见也很实用。MySQL主从复制的需求是因为在将GitHub上一个BitTorrent DHT搜索引擎架设到服务器时，想通过复制实现异步数据同步。而全文索引也是想提高千万数据前提下模糊查询速度，将在之后写出。">
+<meta name="keywords" content="MySQL">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL 主从同步及全文索引">
+<meta property="og:url" content="http://zhongm.in/2017/04/29/MySQL-FulltextIndex-And-Sync/index.html">
+<meta property="og:site_name" content="污力大熊的博客">
+<meta property="og:description" content="这两个都是自己在实际操作上遇到的具体问题，很常见也很实用。MySQL主从复制的需求是因为在将GitHub上一个BitTorrent DHT搜索引擎架设到服务器时，想通过复制实现异步数据同步。而全文索引也是想提高千万数据前提下模糊查询速度，将在之后写出。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/mysql_rep1.jpg">
+<meta property="og:updated_time" content="2019-07-13T14:02:07.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="MySQL 主从同步及全文索引">
+<meta name="twitter:description" content="这两个都是自己在实际操作上遇到的具体问题，很常见也很实用。MySQL主从复制的需求是因为在将GitHub上一个BitTorrent DHT搜索引擎架设到服务器时，想通过复制实现异步数据同步。而全文索引也是想提高千万数据前提下模糊查询速度，将在之后写出。">
+<meta name="twitter:image" content="http://zhongm.in/images/2017/04/mysql_rep1.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://zhongm.in/2017/04/29/MySQL-FulltextIndex-And-Sync/">
+
+
+
+
+
+  <title>MySQL 主从同步及全文索引 | 污力大熊的博客</title><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">污力大熊的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description"></h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://zhongm.in/2017/04/29/MySQL-FulltextIndex-And-Sync/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="污力大熊">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="污力大熊的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">MySQL 主从同步及全文索引</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-29T15:18:52+08:00">
+                2017-04-29
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/DataBase/" itemprop="url" rel="index">
+                    <span itemprop="name">DataBase</span>
+                  </a>
+                </span>
+
+                
+                
+                  ， 
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/DataBase/Linux/" itemprop="url" rel="index">
+                    <span itemprop="name">Linux</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                
+                  <span class="post-meta-divider">|</span>
+                
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  1,670 字
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  7 分钟
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>这两个都是自己在实际操作上遇到的具体问题，很常见也很实用。MySQL主从复制的需求是因为在将GitHub上一个<span style="color: #00ff00;"><a href="https://github.com/boramalper/magnetico" target="_blank" rel="noopener">BitTorrent DHT搜索引擎</a></span>架设到服务器时，想通过复制实现异步数据同步。而全文索引也是想提高千万数据前提下模糊查询速度，将在之后写出。</p>
+<p><img src="/images/2017/04/mysql_rep1.jpg" alt></p>
+<a id="more"></a>
+
+<h1 id="主从同步"><a href="#主从同步" class="headerlink" title="主从同步"></a>主从同步</h1><p>其中很多都是官方文档中意译过来的，英文文档可能更详细 <a href="https://dev.mysql.com/doc/refman/5.7/en/replication-howto.html" target="_blank" rel="noopener">https://dev.mysql.com/doc/refman/5.7/en/replication-howto.html</a></p>
+<h2 id="一、实现机制"><a href="#一、实现机制" class="headerlink" title="一、实现机制"></a>一、实现机制</h2><p>主从同步是在主从复制的基础上个实现的。</p>
+<p>MySQL支持两种复制方式：基于行复制和基于语句复制。但本质上都是通过在主库上记录二进制日志（binlog），然后从库上通过一个I/O线程从主库上读取binlog，然后传输到从库的中继日志中，然后从库的SQL线程从中继日志中读取中继日志，然后应用到从库的数据库中。这样就实现了主从同步。</p>
+<p>当然实现A-&gt;B-&gt;C也是这个道理，只不过C读取的是B的 binlog。</p>
+<h2 id="二、配置步骤"><a href="#二、配置步骤" class="headerlink" title="二、配置步骤"></a>二、配置步骤</h2><h3 id="1、创建复制帐号"><a href="#1、创建复制帐号" class="headerlink" title="1、创建复制帐号"></a>1、创建复制帐号</h3><p>创建单独的复制帐号，主从推荐都加，而权限只需要<a href="https://dev.mysql.com/doc/refman/5.7/en/privileges-provided.html#priv_replication-slave" target="_blank" rel="noopener"><code>REPLICATION SLAVE</code></a> 即可。另外开启MySQL远程连接自然也是必须的。</p>
+<pre class="lang:mysql decode:true" title="MySQL Create User">限制帐号登录IP为slaveip
+mysql&gt; CREATE USER 'repl'@'slaveip' IDENTIFIED BY 'slavepass';
+mysql&gt; GRANT REPLICATION SLAVE ON *.* TO 'repl'@'slaveip';</pre>
+
+<h3 id="2、主库配置"><a href="#2、主库配置" class="headerlink" title="2、主库配置"></a>2、主库配置</h3><p>主库必须开启二进制日志选项，并指定唯一的 serve-id，在配置文件my.cn或my.ini的[mysqld]部分修改，修改后重启。</p>
+<pre class="lang:mysql decode:true" title="mysqld">[mysqld]
+log-bin=mysql-bin
+server-id=1
+#binlog-ignore-db=库名 #可选，设置不同步的库，可设置多个
+#binlog-do-db=库名     #可选，开启后只同步这些数据库
+#expire_logs_days=10  #可选，设置保留时间
+#sync_binlog=5        #可选，设置写入频率，以降低性能减少库崩溃损失</pre>
+<blockquote>
+<p>server-id 必填，并且取值在1 ~ (2^32)-1，不为0</p>
+<p><span id="result_box" class lang="zh-CN"><span class>在复制设置中尽可能使InnoDB事务的持久性和一致性，您可在master my.cnf文件中使用innodb_flush_log_at_trx_commit = 1和sync_binlog = 1。</span></span></p>
+</blockquote>
+<h3 id="3、确定主库当前binlog位置"><a href="#3、确定主库当前binlog位置" class="headerlink" title="3、确定主库当前binlog位置"></a>3、确定主库当前binlog位置</h3><p>通过命令行在主库开启一个会话，阻止所有表写入操作（确保位置准确）</p>
+<pre class="lang:mysql decode:true" title="flush tables">mysql&gt; FLUSH TABLES WITH READ LOCK;
+
+#离开当前会话需再输入，保存效果
+mysql&gt; FLUSH TABLES</pre>
+<p>然后查看当前binlog 文件名(File)和位置(Position)，需记住并在之后用到</p>
+<pre class="lang:mysql decode:true" title="Master Status">mysql &gt; SHOW MASTER STATUS;
++------------------+----------+--------------+------------------+
+| File             | Position | Binlog_Do_DB | Binlog_Ignore_DB |
++------------------+----------+--------------+------------------+
+| mysql-bin.000003 | 73       | test         | manual,mysql     |
++------------------+----------+--------------+------------------+</pre>
+<p>在结束第四步后则释放锁</p>
+<pre class="lang:mysql decode:true" title="unlock">mysql&gt; UNLOCK TABLES;</pre>
+
+<h3 id="4、创建数据快照"><a href="#4、创建数据快照" class="headerlink" title="4、创建数据快照"></a>4、创建数据快照</h3><p>这是后就有三种情况了：</p>
+<ul>
+<li>主从库都没有数据，也没有要导入的数据；</li>
+<li>主从库都没有数据，但有需要导入的数据；</li>
+<li>主库有存在的数据，但从库是新的空库；<br>第一种情况可直接跳到下一步，配置从库。</li>
+</ul>
+<p>第二种情况也可直接跳到下一步，配置好从库后，将数据导入主库即自动同步到从库。当然也可分别导入主、从库，然后再从头进行主从同步配置。</p>
+<p>第三种情况先将主库中数据导出，再导入到从库。</p>
+<pre class="lang:sh decode:true" title="mysqldump"># --master-data 选项可自动追加从库复制过程需要的 CHANGE MASTER TO
+# 如果不加，则需要主库锁住所有的表
+# --ignore-table 排除哪些库
+# --databases    指定哪些库
+shell&gt; mysqldump --all-databases --master-data &gt; dbdump.db
+</pre>
+
+<h3 id="5、从库配置"><a href="#5、从库配置" class="headerlink" title="5、从库配置"></a>5、从库配置</h3><p>从库修改配置，并重启数据库。</p>
+<pre class="lang:mysql decode:true" title="slave-mysqld">[mysqld]
+server-id=2
+#以下为 A-&gt;B-&gt;C 额外配置
+#log-bin=bin     #可选，从库开启二进制日志
+#relay-log=relay-bin #可选
+#log-slave-updates=1 #可选，允许从库将重放的事件也记录到自身的二进制日志中
+#read_only=1     # 防止从库被修改</pre>
+<p>从库启动复制配置</p>
+<pre class="lang:mysql decode:true" title="CHANGE MASTER TO">mysql&gt; CHANGE MASTER TO
+    -&gt;     MASTER_HOST='master_host_name',#主库IP
+    -&gt;     MASTER_USER='replication_user_name',#复制帐号
+    -&gt;     MASTER_PASSWORD='replication_password',#密码
+    -&gt;     MASTER_LOG_FILE='recorded_log_file_name',#步骤三的File
+    -&gt;     MASTER_LOG_POS=recorded_log_position;#步骤三的Position
+    -&gt;     MASTER_CONNECT_RETRY=10; #断开重连时间</pre>
+<p>启动复制，并查看状态</p>
+<pre class="lang:mysql decode:true" title="START SLAVE">mysql&gt; START SLAVE; #开启同步，结束则为STOP
+mysql&gt; SHOW SLAVE STATUS\G
+*************************** 1\. row ***************************
+               Slave_IO_State: Waiting for master to send event
+                  Master_Host: 192.168.0.10
+                  Master_User: repl
+                  Master_Port: 3306
+                Connect_Retry: 60
+              Master_Log_File: mysql-bin.000003
+          Read_Master_Log_Pos: 73
+               Relay_Log_File: relay-bin.000001
+                Relay_Log_Pos: 400
+        Relay_Master_Log_File: mysql-bin.000003
+             Slave_IO_Running: Yes #
+            Slave_SQL_Running: Yes #都为yes则正常
+            ...
+            Seconds_Behind_Master: 0</pre>
+
+<h1 id="全文索引"><a href="#全文索引" class="headerlink" title="全文索引"></a>全文索引</h1><h2 id="一、前言"><a href="#一、前言" class="headerlink" title="一、前言"></a>一、前言</h2><p>个人在实践中遇到的情况是这样的：在InnoDB引擎的一个70万+记录的表中，要模糊查询一个text 类型的字段。常见的like 模糊查询需要消耗1.7 + sec ，已经不让人满意了，更不用说更大量的数据。</p>
+<h1 id="二、过程"><a href="#二、过程" class="headerlink" title="二、过程"></a>二、过程</h1><p>发现全文索引(FULLTEXT)可能是个不错的办法（当然也可使用一些搜索引擎软件，不过对于几十万量级好像没必要），不过在文档中发现：</p>
+<p>1、MySQL是从5.6版本才开始支持InnoDB引擎的全文索引，语法层面上大多数兼容之前MyISAM的全文索引模式。但是不支持中、韩、日文</p>
+<p>2、从MySQL 5.7.3开始InnoDB支持全文索引插件，用户可以以Plugin的模式来定义自己的分词规则，或是引入社区开发的全文索引解析器。于是可以使用支持中文的全文索引插件。</p>
+<p>3、从MySQL5.7.6版本开始提供了一种内建的全文索引 ngram parser，可以很好的支持CJK字符集（中文、日文、韩文）。内建在代码中，该解析器默认安装，你可以通过指定索引属性（<code>WITH PARSER ngram</code>）来利用该parser。</p>
+<pre class="lang:mysql decode:true" title="ngram parser">#创建
+mysql&gt; create table ft_test(id int, content text, fulltext (content) with parser ngram);
+#修改
+mysql&gt; alter table ft_test add fulltext content(content) with parser ngram;</pre>
+<p>当然如果数据量大的话，这可能需要花不少时间（对我可怜的ECS、VPS够呛的）当然这是值得的，通过全文索引能将查询时间降低到0.06 sec 左右。</p>
+<p>而N-Gram是使用一种特殊的方式来进行分词，举个简单的例子，假设要对单词’abcd’进行分词，那么其分词结果为：</p>
+<pre><code>N=1 : &apos;a&apos;, &apos;b&apos;, &apos;c&apos;, &apos;d&apos;;
+N=2 : &apos;ab&apos;, &apos;bc&apos;, &apos;cd&apos;;
+N=3 : &apos;abc&apos;,&apos;bcd&apos;;
+N=4: &apos;abcd&apos;;</code></pre><p>N取决于<code>ngram_token_size</code>的设置，默认值为2。</p>
+<p>在执行查询时，用户传递的搜索词也会基于N-Gram进行分解后进行检索。<code>而关于停词和分词处理 可参考官方博文 [http://mysqlserverteam.com/innodb全文索引：n-gram-parser/](http://mysqlserverteam.com/innodb全文索引：n-gram-parser/)</code></p>
+<p>阿里的这篇特性讲解也很详细 <a href="http://mysql.taobao.org/monthly/2015/10/01/" target="_blank" rel="noopener">http://mysql.taobao.org/monthly/2015/10/01/</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>觉得不错不妨打赏一笔</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.png" alt="污力大熊 WeChat Pay">
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    污力大熊
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://zhongm.in/2017/04/29/MySQL-FulltextIndex-And-Sync/" title="MySQL 主从同步及全文索引">http://zhongm.in/2017/04/29/MySQL-FulltextIndex-And-Sync/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/MySQL/" rel="tag"><i class="fa fa-tag"></i> MySQL</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/04/15/Linux-Advanced-Notes/" rel="next" title="Linux 进阶小记">
+                <i class="fa fa-chevron-left"></i> Linux 进阶小记
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/05/03/2017-Interview-Baidu-And-Tecent/" rel="prev" title="2017百度、腾讯春招笔试">
+                2017百度、腾讯春招笔试 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript">
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="污力大熊">
+          <p class="site-author-name" itemprop="name">污力大熊</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">19</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">27</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/single-wolf" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                    
+                      GitHub
+                    
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://zhihu.com/people/ling-hu-chong-39-90/activities" target="_blank" title="ZhiHu">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                    
+                      ZhiHu
+                    
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-block">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://github.com/single-wolf" title="GitHub" target="_blank">GitHub</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#主从同步"><span class="nav-number">1.</span> <span class="nav-text">主从同步</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#一、实现机制"><span class="nav-number">1.1.</span> <span class="nav-text">一、实现机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#二、配置步骤"><span class="nav-number">1.2.</span> <span class="nav-text">二、配置步骤</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1、创建复制帐号"><span class="nav-number">1.2.1.</span> <span class="nav-text">1、创建复制帐号</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2、主库配置"><span class="nav-number">1.2.2.</span> <span class="nav-text">2、主库配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3、确定主库当前binlog位置"><span class="nav-number">1.2.3.</span> <span class="nav-text">3、确定主库当前binlog位置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4、创建数据快照"><span class="nav-number">1.2.4.</span> <span class="nav-text">4、创建数据快照</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5、从库配置"><span class="nav-number">1.2.5.</span> <span class="nav-text">5、从库配置</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#全文索引"><span class="nav-number">2.</span> <span class="nav-text">全文索引</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#一、前言"><span class="nav-number">2.1.</span> <span class="nav-text">一、前言</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#二、过程"><span class="nav-number">3.</span> <span class="nav-text">二、过程</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">污力大熊</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+  
+  <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.2"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.2"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'manual') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+  
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        }
+      });
+    </script>
+
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+      });
+    </script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script><!-- hexo-inject:begin --><!-- Begin: Injected MathJax -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config("");
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="custom_mathjax_source">
+</script>
+<!-- End: Injected MathJax -->
+<!-- hexo-inject:end -->
+  
+
+
+  
+
+  
+
+</body>
+</html>

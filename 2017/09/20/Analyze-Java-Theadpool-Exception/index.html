@@ -1,0 +1,1816 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+  
+  
+  <link rel="stylesheet" media="all" href="/lib/Han/dist/han.min.css?v=3.3">
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.2" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="Java,JVM,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="污力大熊的博客" type="application/atom+xml">
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico?v=5.1.2">
+
+
+
+
+
+
+<meta name="description" content="在逛同性交友网站GitHub的时候看到一个解析线程池异常处理的Issue，正好是曾经自己遇到过的问题。在此记录下来，并将其拓展到其他类型的线程池。 本文因篇幅省略了诸多AQS相关知识，可以查看博客中另一篇博文 一行一行源码分析清楚AQS 以保证清楚理解本文。">
+<meta name="keywords" content="Java,JVM">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深度解析Java线程池的异常处理">
+<meta property="og:url" content="http://zhongm.in/2017/09/20/Analyze-Java-Theadpool-Exception/index.html">
+<meta property="og:site_name" content="污力大熊的博客">
+<meta property="og:description" content="在逛同性交友网站GitHub的时候看到一个解析线程池异常处理的Issue，正好是曾经自己遇到过的问题。在此记录下来，并将其拓展到其他类型的线程池。 本文因篇幅省略了诸多AQS相关知识，可以查看博客中另一篇博文 一行一行源码分析清楚AQS 以保证清楚理解本文。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-07-13T13:53:00.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="深度解析Java线程池的异常处理">
+<meta name="twitter:description" content="在逛同性交友网站GitHub的时候看到一个解析线程池异常处理的Issue，正好是曾经自己遇到过的问题。在此记录下来，并将其拓展到其他类型的线程池。 本文因篇幅省略了诸多AQS相关知识，可以查看博客中另一篇博文 一行一行源码分析清楚AQS 以保证清楚理解本文。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://zhongm.in/2017/09/20/Analyze-Java-Theadpool-Exception/">
+
+
+
+
+
+  <title>深度解析Java线程池的异常处理 | 污力大熊的博客</title><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">污力大熊的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description"></h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://zhongm.in/2017/09/20/Analyze-Java-Theadpool-Exception/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="污力大熊">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="污力大熊的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">深度解析Java线程池的异常处理</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-09-20T21:10:07+08:00">
+                2017-09-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Java/" itemprop="url" rel="index">
+                    <span itemprop="name">Java</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                
+                  <span class="post-meta-divider">|</span>
+                
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  3,508 字
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  16 分钟
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在逛同性交友网站GitHub的时候看到一个解析线程池异常处理的Issue，正好是曾经自己遇到过的问题。在此记录下来，并将其拓展到其他类型的线程池。</p>
+<p>本文因篇幅省略了诸多AQS相关知识，可以查看博客中另一篇博文 <a href="/2017/08/25/Analyze-JDK-AQS/">一行一行源码分析清楚AQS</a> 以保证清楚理解本文。</p>
+<a id="more"></a>
+
+<h3 id="1、ThreadPoolExecutor"><a href="#1、ThreadPoolExecutor" class="headerlink" title="1、ThreadPoolExecutor"></a>1、ThreadPoolExecutor</h3><blockquote>
+<p>此部分来源于 <a href="https://github.com/aCoder2013/blog/issues/3" target="_blank" rel="noopener">GitHub aCoder2013</a></p>
+</blockquote>
+<p>这一线程池由来已久，是抽象类 AbstractExecutorService 继承类，通过调用不同构造函数实现诸如 newFixedThreadPool 、newCachedThreadPool 线程池功能。</p>
+<h4 id="问题："><a href="#问题：" class="headerlink" title="问题："></a>问题：</h4><p>考虑下面这段代码，有什么区别呢？你可以猜猜会不会有异常打出呢？如果打出来的话是在哪里？：</p>
+<pre class="lang:java decode:true" title="Question">        ExecutorService threadPool = Executors.newFixedThreadPool(1);
+        threadPool.submit(() -&gt; {
+            Object obj = null;
+            System.out.println(obj.toString());
+        });
+        threadPool.execute(() -&gt; {
+            Object obj = null;
+            System.out.println(obj.toString());
+        });</pre>
+
+<p>你会发现单就执行这两句的话，结果只会打印一处异常信息，来源于 execute() 中的 obj.toString() 。</p>
+<h4 id="源码解析："><a href="#源码解析：" class="headerlink" title="源码解析："></a>源码解析：</h4><p>分析下面源码，发现其实重载的 submit() 方法将 Runnable、Callable 都封装成继承 Future 的 RunnableFuture 的实现类 FutureTask 对象（有点忽悠  XD）</p>
+<pre class="lang:java decode:true" title="SrcAnalyse">    public Future&lt;?&gt; submit(Runnable task) {
+        if (task == null) throw new NullPointerException();
+        RunnableFuture&lt;Void&gt; ftask = newTaskFor(task, null);
+        execute(ftask);
+        return ftask;
+    }
+    public &lt;T&gt; Future&lt;T&gt; submit(Callable&lt;T&gt; task) {
+        if (task == null) throw new NullPointerException();
+        RunnableFuture&lt;T&gt; ftask = newTaskFor(task);
+        execute(ftask);
+        return ftask;
+    }
+    protected &lt;T&gt; RunnableFuture&lt;T&gt; newTaskFor(Runnable runnable, T value) {
+        return new FutureTask&lt;T&gt;(runnable, value);
+    }
+    public FutureTask(Runnable runnable, V result) {
+        this.callable = Executors.callable(runnable, result);
+        this.state = NEW;       // volatile修饰，保证多线程下的可见性,可以看看Java内存模型
+    }
+    public static &lt;T&gt; Callable&lt;T&gt; callable(Runnable task, T result) {
+        if (task == null)
+            throw new NullPointerException();
+        return new RunnableAdapter&lt;T&gt;(task, result);
+    }
+
+    static final class RunnableAdapter&lt;T&gt; implements Callable&lt;T&gt; {
+        final Runnable task;
+        final T result;
+        RunnableAdapter(Runnable task, T result) {
+            this.task = task;
+            this.result = result;
+        }
+        public T call() {
+            task.run();
+            return result;
+        }
+    }</pre>
+
+<p>接下来就会实际提交到队列中交给线程池调度处理：</p>
+<pre class="lang:java decode:true " title="SrcAnalyse2"> /**
+    * 这里经过多次检查验证
+    * 意图都是将通过addWorker()或是workQueue.offer()
+    * 将Runnable传给继承AQS的Worker内部类进行封装
+    * 了解AQS的同学一看便能融会贯通
+    */
+    public void execute(Runnable command) {
+        if (command == null)
+            throw new NullPointerException();
+        int c = ctl.get();
+        if (workerCountOf(c) &lt; corePoolSize) {
+            if (addWorker(command, true))
+                return;
+            c = ctl.get();
+        }
+        if (isRunning(c) &amp;&amp; workQueue.offer(command)) {
+            int recheck = ctl.get();
+            if (! isRunning(recheck) &amp;&amp; remove(command))
+                reject(command);
+            else if (workerCountOf(recheck) == 0)
+                addWorker(null, false);
+        }
+        else if (!addWorker(command, false))
+            reject(command);
+    }</pre>
+
+<p>那么接下来看看线程池核心的流程：</p>
+<pre class="lang:java decode:true" title="SrcAnalyse3">private final class Worker
+        extends AbstractQueuedSynchronizer
+        implements Runnable{
+          /** Delegates main run loop to outer runWorker  */
+        public void run() {
+            runWorker(this);
+        }
+}
+
+final void runWorker(Worker w) {
+        Thread wt = Thread.currentThread();
+        Runnable task = w.firstTask;
+        w.firstTask = null;
+        w.unlock(); // allow interrupts
+        boolean completedAbruptly = true;
+        try {
+            //getTask()方法会尝试从队列中抓取数据
+            while (task != null || (task = getTask()) != null) {
+                w.lock();
+                if ((runStateAtLeast(ctl.get(), STOP) ||
+                     (Thread.interrupted() &amp;&amp;
+                      runStateAtLeast(ctl.get(), STOP))) &amp;&amp;
+                    !wt.isInterrupted())
+                    wt.interrupt();
+                try {
+                    //可覆写此方法打日志埋点之类的
+                    beforeExecute(wt, task);
+                    Throwable thrown = null;
+                    try {
+                        //简单明了，直接调用run方法
+                        task.run();
+                    } catch (RuntimeException x) {
+                        thrown = x; throw x;
+                    } catch (Error x) {
+                        thrown = x; throw x;
+                    } catch (Throwable x) {
+                        thrown = x; throw new Error(x);
+                    } finally {
+                        afterExecute(task, thrown);//下文将介绍可以重写此方法捕获异常
+                    }
+                } finally {
+                    task = null;
+                    w.completedTasks++;
+                    w.unlock();
+                }
+            }
+            completedAbruptly = false;
+        } finally {
+            processWorkerExit(w, completedAbruptly);
+        }
+    }</pre>
+
+<h4 id="submit-的方式"><a href="#submit-的方式" class="headerlink" title="submit() 的方式"></a>submit() 的方式</h4><p>之前我们知道最终传递过去的是FutureTask，也就是说会调用这里的 Future 的 run方法，我们看看实现：</p>
+<pre class="lang:java decode:true" title="SrcAnalyse4">    public void run() {
+        if (state != NEW ||
+            !UNSAFE.compareAndSwapObject(this, runnerOffset,
+                                         null, Thread.currentThread()))
+            return;
+        try {
+            Callable&lt;V&gt; c = callable;
+            if (c != null &amp;&amp; state == NEW) {
+                V result;
+                boolean ran;
+                try {
+                    result = c.call();
+                    ran = true;
+                } catch (Throwable ex) {//捕获异常不抛出
+                    result = null;
+                    ran = false;
+                    //。。。
+                    setException(ex);//调用此方法设置异常状态
+                }
+                if (ran)
+                    set(result);
+            }
+        } finally {
+          //省略
+    }
+
+      protected void setException(Throwable t) {
+        if (UNSAFE.compareAndSwapInt(this, stateOffset, NEW, COMPLETING)) {
+            outcome = t; //异常赋给了这个变量
+            UNSAFE.putOrderedInt(this, stateOffset, EXCEPTIONAL); // 将状态CAS为EXCEPTIONAL
+            finishCompletion();
+        }
+    }
+    public V get() throws InterruptedException, ExecutionException {//Future.get()获取返回值
+        int s = state;
+        if (s &lt;= COMPLETING)
+            s = awaitDone(false, 0L);
+        return report(s);//最终调用report返回outcome变量
+    }
+    private V report(int s) throws ExecutionException {
+        Object x = outcome;
+        if (s == NORMAL)
+            return (V)x;
+        if (s &gt;= CANCELLED)
+            throw new CancellationException();
+        throw new ExecutionException((Throwable)x);//若状态异常则抛出outcome异常
+    }</pre>
+
+<p>如上面分析到的，这样的话调用 FutureTask.run() 并不会直接抛出异常，所以在 ThreadPool.execute() 中捕获不到异常。但我们可以通过调用 get() 方法来捕捉异常。</p>
+<h4 id="submit-解决方式"><a href="#submit-解决方式" class="headerlink" title="submit() 解决方式"></a>submit() 解决方式</h4><p>1、基本方式 try/catch，直接调用get()</p>
+<p>2、重写  protected afterExecute(Runnable r,Throwable t ) { } 方法</p>
+<p>想想如果我明明一开始调用的是 submit(Runnable r) ，为了捕捉异常还需刻意调用 get() 未免有点麻烦。Doug Lea 大佬已经在 JDK 文档中教我们可以重写 ThreadPoolExecutor 中的 afterExecute() 方法来实现异常捕获：</p>
+<pre class="lang:java decode:true" title="SrcAnalyse5">    protected void afterExecute(Runnable r, Throwable t) {
+          super.afterExecute(r, t);
+          if (t == null &amp;&amp; r instanceof Future&lt;?&gt;) {
+            try {
+              //如上文所说，主动调用get() 将异常抛出
+              Object result = ((Future&lt;?&gt;) r).get();
+            } catch (CancellationException ce) {
+                t = ce;
+            } catch (ExecutionException ee) {//异常捕获
+                t = ee.getCause();
+            } catch (InterruptedException ie) {
+                Thread.currentThread().interrupt(); // ignore/reset
+            }
+          }
+          if (t != null){
+            //异常处理
+            t.printStackTrace();
+          }
+        }</pre>
+
+<h4 id="execute-方式："><a href="#execute-方式：" class="headerlink" title="execute() 方式："></a>execute() 方式：</h4><p>如代码SrcAnalyse2，此方法不同于submit() 会进行封装成Future ，其传递过去的就直接是Runnable,因此就会直接抛出：</p>
+<pre class="lang:java decode:true" title="SrcAnalyse2-sample">    try {
+        task.run();//在此情况直接为Runnable.run()
+    } catch (RuntimeException x) {//异常被直接捕获
+        thrown = x; throw x;
+    } catch (Error x) {
+        thrown = x; throw x;
+    } catch (Throwable x) {
+        thrown = x; throw new Error(x);
+    } finally {
+        afterExecute(task, thrown);
+    }</pre>
+
+<p>那么这里的异常到底会抛出到哪里呢, 我们看看JVM具体是怎么处理的：</p>
+<pre class="lang:java decode:true " title="JVM-Analyse">if (!destroy_vm || JDK_Version::is_jdk12x_version()) {
+    // JSR-166: change call from from ThreadGroup.uncaughtException to
+    // java.lang.Thread.dispatchUncaughtException
+    if (uncaught_exception.not_null()) {
+      //如果有未捕获的异常
+      Handle group(this, java_lang_Thread::threadGroup(threadObj()));
+      {
+        KlassHandle recvrKlass(THREAD, threadObj-&gt;klass());
+        CallInfo callinfo;
+        KlassHandle thread_klass(THREAD, SystemDictionary::Thread_klass());
+        /*  
+            这里类似一个方法表，实际就会去调用Thread#dispatchUncaughtException方法
+            template(dispatchUncaughtException_name,            "dispatchUncaughtException")                
+        */
+        LinkResolver::resolve_virtual_call(callinfo, threadObj, recvrKlass, thread_klass,
+                                           vmSymbols::dispatchUncaughtException_name(),
+                                           vmSymbols::throwable_void_signature(),
+                                           KlassHandle(), false, false, THREAD);
+        CLEAR_PENDING_EXCEPTION;
+        methodHandle method = callinfo.selected_method();
+        if (method.not_null()) {
+          JavaValue result(T_VOID);
+          JavaCalls::call_virtual(&amp;result,
+                                  threadObj, thread_klass,
+                                  vmSymbols::dispatchUncaughtException_name(),
+                                  vmSymbols::throwable_void_signature(),
+                                  uncaught_exception,
+                                  THREAD);
+        } else {
+          KlassHandle thread_group(THREAD, SystemDictionary::ThreadGroup_klass());
+          JavaValue result(T_VOID);
+          JavaCalls::call_virtual(&amp;result,
+                                  group, thread_group,
+                                  vmSymbols::uncaughtException_name(),
+                                  vmSymbols::thread_throwable_void_signature(),
+                                  threadObj,           // Arg 1
+                                  uncaught_exception,  // Arg 2
+                                  THREAD);
+        }
+        if (HAS_PENDING_EXCEPTION) {
+          ResourceMark rm(this);
+          jio_fprintf(defaultStream::error_stream(),
+                "\nException: %s thrown from the UncaughtExceptionHandler"
+                " in thread \"%s\"\n",
+                pending_exception()-&gt;klass()-&gt;external_name(),
+                get_thread_name());
+          CLEAR_PENDING_EXCEPTION;
+        }
+      }
+    }</pre>
+
+<p>可以看到这里最终会去调用Thread#dispatchUncaughtException方法：</p>
+<pre class="lang:java decode:true" title="SrcAnalyse6">    private void dispatchUncaughtException(Throwable e) {
+        //默认会调用ThreadGroup的实现
+        getUncaughtExceptionHandler().uncaughtException(this, e);
+    }
+​
+
+    public void uncaughtException(Thread t, Throwable e) {
+        if (parent != null) {
+            parent.uncaughtException(t, e);
+        } else {
+            Thread.UncaughtExceptionHandler ueh =
+                Thread.getDefaultUncaughtExceptionHandler();
+            if (ueh != null) {
+                ueh.uncaughtException(t, e);
+            } else if (!(e instanceof ThreadDeath)) {
+                //可以看到会打到System.err里面
+                System.err.print("Exception in thread \""
+                                 + t.getName() + "\" ");
+                e.printStackTrace(System.err);
+            }
+        }
+    }</pre>
+
+<h4 id="execute-解决方式"><a href="#execute-解决方式" class="headerlink" title="execute() 解决方式"></a>execute() 解决方式</h4><p>1、基本方式，直接try/catch</p>
+<p>2、线程重写 setUncaughtExceptionHandler() 方法</p>
+<pre class="lang:java decode:true" title="Solution">       Thread t = new Thread();
+       t.setUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+
+           public void uncaughtException(Thread t, Throwable e) {
+              LOGGER.error(t + " throws exception: " + e);
+           }
+        });
+        //如果是线程池的模式:
+        ExecutorService threadPool = Executors.newFixedThreadPool(1, r -&gt; {
+            Thread t = new Thread(r);
+            t.setUncaughtExceptionHandler(
+                (t1, e) -&gt; LOGGER.error(t1 + " throws exception: " + e));
+            return t;
+        });</pre>
+
+
+<h3 id="2、ForkJoinPool"><a href="#2、ForkJoinPool" class="headerlink" title="2、ForkJoinPool"></a>2、ForkJoinPool</h3><p><code>ForkJoinPool</code>也是继承<code>AbstractExecutorService</code>的线程池，实现了 Fork/Join 及 work-stealing 以提升多核计算效率（详细的 ForkJoin 设计原理可参考<a href="http://www.molotang.com/articles/694.html" target="_blank" rel="noopener">三石 道</a> 、<a href="http://ifeve.com/a-java-fork-join-framework/" target="_blank" rel="noopener">并发编程网</a> ）。<br>因各版本 JDK 源码略有差异，此处仅为 JDK8 源码分析，且不具体分析线程池运行机制。</p>
+<p>JDK源码中给了我们这样一个<strong>任务提交总结表</strong></p>
+<table>
+<thead>
+<tr>
+<th align="center">任务执行需求</th>
+<th align="center">在非Fork/Join调用</th>
+<th align="center">在Fork/Join计算中调用</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">异步执行无返回值</td>
+<td align="center">execute(ForkJoinTask)</td>
+<td align="center">ForkJoinTask.fork()</td>
+</tr>
+<tr>
+<td align="center">等待获取返回值</td>
+<td align="center">invoke(ForkJoinTask)</td>
+<td align="center">ForkJoinTask.invoke()</td>
+</tr>
+<tr>
+<td align="center">异步执行并获取Future</td>
+<td align="center">submit(ForkJoinTask)</td>
+<td align="center">ForkJoinTask.fork()</td>
+</tr>
+</tbody></table>
+<blockquote>
+<ol>
+<li>非Fork/Join 和在 Fork/Join 中是指调用提交时所在的位置，前者为外部（main）通过 ForkJoinPool 本身提交 ForkJoinTask ，后者为 ForkJoinTask 执行中再将子任务提交到 ForkJoinPool 中。</li>
+<li>ForkJoinTask fork 方法返回<code>this</code>，而 ForkJoinTask 本身实现 Future ，则第三种中可使用 <code>submit(ForkJoinTask).get()</code> 和 <code>ForkJoinTask.fork().get()</code>获取返回值，将 get 方法换成 join 也同样可行，区别只在于异常处理方式。</li>
+<li>调用 <code>execute(Runnable)</code>、<code>submit(Runnable)</code>、<code>submit(Callable)</code>将通过 ForkJoinTask 的子类进行适配。</li>
+<li>此外还有 <code>invokeAll(Collection  &lt;Callable&gt;)</code> 等方法，类似此处就不讨论。</li>
+</ol>
+</blockquote>
+<pre><code>//ForkJoinPool
+public &lt;T&gt; T invoke(ForkJoinTask&lt;T&gt; task) {} //提交并等待返回值
+public void execute(ForkJoinTask&lt;?&gt; task) {} //提交，异步执行
+public void execute(Runnable task) {}
+//提交并异步执行，返回ForkJoinTask
+public &lt;T&gt; ForkJoinTask&lt;T&gt; submit(ForkJoinTask&lt;T&gt; task) {}
+public &lt;T&gt; ForkJoinTask&lt;T&gt; submit(Callable&lt;T&gt; task) {}
+public &lt;T&gt; ForkJoinTask&lt;T&gt; submit(Runnable task, T result) {}
+public ForkJoinTask&lt;?&gt; submit(Runnable task) {}
+//ForkJoinTask
+public final ForkJoinTask&lt;V&gt; fork() {} // 提交并异步执行
+public final V invoke() {} //提交并等待返回值</code></pre><h4 id="跟踪捕获"><a href="#跟踪捕获" class="headerlink" title="跟踪捕获"></a>跟踪捕获</h4><p>ForkJoinPool 中三种类型的提交方法都将调用 <code>externalPush(ForkJoinTask)</code> 或<code>externalSubmit(ForkJoinTask)</code>将参数封装成 ForkJoinTask 并 Push 到 已存在或初始化的 WorkQueue 中</p>
+<p>我们绕过具体的任务调度、状态转换直接从执行 ForkJoinTask 的 ForkJoinWokerThread 来跟踪执行异常的处理 （每个这样的线程对象都在 ForkJoinPool 中有一对应的 WorkQueue）</p>
+<p>线程run方法： ForkJoinWorkerThread.run()</p>
+<pre><code>    public void run() {
+    if (workQueue.array == null) { // only run once
+        Throwable exception = null;
+        try {
+            onStart(); // 空方法
+            // 调用 ForkJoinPool 中方法开始执行
+            pool.runWorker(workQueue); 
+             } catch (Throwable ex) {  // 此处捕获抛出的异常，最后将介绍
+             exception = ex;
+        } finally {
+             try {
+                    onTermination(exception); // 自定义收尾函数
+                } catch (Throwable ex) {
+                    if (exception == null)
+                        exception = ex;
+                } finally {
+                    pool.deregisterWorker(this, exception); // 自定义异常处理，最后介绍
+                }
+        }
+    }
+}</code></pre><p>线程执行循环： ForkJoinPool.runWorker(WorkQueue)</p>
+<pre><code>final void runWorker(WorkQueue w) {
+    w.growArray();                   // 给 WorkQueue 分配任务数组
+    int seed = w.hint;               // 初始化随机数
+    int r = (seed == 0) ? 1 : seed;  
+    for (ForkJoinTask&lt;?&gt; t;;) {
+        if ((t = scan(w, r)) != null) // 实现 work-stealing 
+            w.runTask(t); // 调用 WorkQueue 方法执行任务 t
+            // 等待任务进入下一循环，若返回false，则退出循环线程进入结束
+        else if (!awaitWork(w, r)) 
+            break;
+        r ^= r &lt;&lt; 13; r ^= r &gt;&gt;&gt; 17; r ^= r &lt;&lt; 5; // 可先忽略
+    }
+}</code></pre><p>调用 WorkQueue 执行： WorkQueue.runTask(ForkJoinTask)</p>
+<pre><code>final void runTask(ForkJoinTask&lt;?&gt; task) {
+        if (task != null) {
+            scanState &amp;= ~SCANNING;
+            // 调用 ForkJoinTask.doExec() 直接执行任务，此处未捕获或抛出
+            (currentSteal = task).doExec();  
+            U.putOrderedObject(this, QCURRENTSTEAL, null); // 
+            execLocalTasks(); // 继续执行 WorkQueue 中任务数组中任务
+            ForkJoinWorkerThread thread = owner;
+            if (++nsteals &lt; 0)   
+                transferStealCount(pool);
+            scanState |= SCANNING;
+            if (thread != null)
+                thread.afterTopLevelExec();
+        }
+    }</code></pre><p>最终调用任务执行方法： ForkJoinTask.doExec()</p>
+<pre><code>final int doExec() {
+    int s; boolean completed;
+    if ((s = status) &gt;= 0) { // 任务状态判断，volatile保证可见性
+        try {
+            completed = exec(); // exec() 为抽象方法以自定义任务执行体
+        } catch (Throwable rex) { // 在此捕获所有任务内容抛出的异常
+            // 修改状态，并记录异常
+            return setExceptionalCompletion(rex); 
+        }
+        if (completed)
+            s = setCompletion(NORMAL);
+    }
+    return s;
+}</code></pre><p>修改任务状态并记录异常： setExceptionalCompletion(Throwable)</p>
+<pre><code>private int setExceptionalCompletion(Throwable ex) {
+    // 使用 Static+弱引用类型+类HashTable结构 变量记录全局异常
+    // 并设置状态为 EXCEPTIONAL ，下文详解
+    int s = recordExceptionalCompletion(ex);
+    if ((s &amp; DONE_MASK) == EXCEPTIONAL)
+    // 自定义异常传播（权限只在此并发包内）
+        internalPropagateException(ex);
+    return s;
+}</code></pre><h4 id="抛出异常"><a href="#抛出异常" class="headerlink" title="抛出异常"></a>抛出异常</h4><p>ExceptionNode[ ] 实现类似 HashTable 以记录异常及异常的 ForkJoinTask。为什么使用弱引用呢？可以想象当分出的诸多子任务中一个子任务异常，势必造成之上的父任务异常，以此循环向上将造成大量异常对象，全部存储将有损效率。所以采用弱应用，当子任务的异常在父任务执行体中因执行 get、join、invoke 而抛出并被我们上面分析到的过程捕获，异常将被记录为父任务的异常并存储，此时子任务异常已没有意义子任务也无引用，使用弱引用可借用GC帮助清除</p>
+<pre><code>static final class ExceptionNode extends WeakReference&lt;ForkJoinTask&lt;?&gt;&gt; {
+    final Throwable ex;
+    ExceptionNode next;  // 虽然设计成数组链表结构，可源码中并没以此存储
+    final long thrower;  // 用id代替引用，避免引用
+    final int hashCode;  // 在弱引用消失前记录ForkJoinTask 的 HashCode
+    ExceptionNode(ForkJoinTask&lt;?&gt; task, Throwable ex, ExceptionNode next) {
+        super(task, exceptionTableRefQueue);
+        this.ex = ex;
+        this.next = next;
+        this.thrower = Thread.currentThread().getId();
+        this.hashCode = System.identityHashCode(task);
+    }
+}</code></pre><p>既然已经记录下异常，那么怎样会抛出这些异常呢？在 ForkJoinTask 中提供方法获取</p>
+<pre><code>private Throwable getThrowableException() {
+    if ((status &amp; DONE_MASK) != EXCEPTIONAL)
+        return null;
+    int h = System.identityHashCode(this);//获取HashCode
+    ExceptionNode e;
+    final ReentrantLock lock = exceptionTableLock;
+    lock.lock();
+    try {
+        // 通过ReferenceQueue清除已无意义ExceptionNode
+        expungeStaleExceptions();
+        //exptionTable是static ExceptionNode[]存储全局异常
+        ExceptionNode[] t = exceptionTable;
+        e = t[h &amp; (t.length - 1)];//以HashCode求数组下标
+        while (e != null &amp;&amp; e.get() != this)
+            e = e.next;//得到对于ExceptionNode
+    } finally {
+        lock.unlock();
+    }
+    Throwable ex;
+    if (e == null || (ex = e.ex) == null)//从ExceptionNode中取异常
+        return null;
+    // 如果出错线程不是当前线程，则在构造此异常以便在提供准确的异常堆栈轨迹
+    if (e.thrower != Thread.currentThread().getId()) {
+        Class&lt;? extends Throwable&gt; ec = ex.getClass();
+        try {
+        // ...........
+        } catch (Exception ignore) {
+        }
+    }
+    return ex;
+}</code></pre><p>上面已提到 ForkJoinTask 中调用到此方法获取异常的有 get、join、invoke、invokeAll<br>其中的 join、invoke、invokeAll 采用如下抛出 Unchecked 异常，而JDK源码示例中也<strong>推荐在任务体中使用这几种</strong>。</p>
+<pre><code>static void rethrow(Throwable ex) {
+    if (ex != null)
+        ForkJoinTask.&lt;RuntimeException&gt;uncheckedThrow(ex);
+}
+@SuppressWarnings(&quot;unchecked&quot;) static &lt;T extends Throwable&gt;
+    void uncheckedThrow(Throwable t) throws T {
+    throw (T)t; 
+}</code></pre><p>而 get 因实现自 Future 而将异常封装成统一的 ExecutionException </p>
+<pre><code>public final V get() throws InterruptedException, ExecutionException {
+    int s = (Thread.currentThread() instanceof ForkJoinWorkerThread) ?
+        doJoin() : externalInterruptibleAwaitDone();
+    Throwable ex;
+    if ((s &amp;= DONE_MASK) == CANCELLED)
+        throw new CancellationException();
+    if (s == EXCEPTIONAL &amp;&amp; (ex = getThrowableException()) != null)
+        throw new ExecutionException(ex);//封装成统一的Checked异常
+    return getRawResult();
+}</code></pre><blockquote>
+<p> <strong>因此只要在执行体中进行合适 Fork/Join 任务分解，并在非 Fork/Join 中给 ForkJoinPool 提交后调用提交或返回的 ForkJoinTask 中 get、join、invoke 方法（即使无返回值也可以调用来抛出），再加以 try/catch 就能捕获到任务体执行过程中的异常。</strong></p>
+</blockquote>
+<h4 id="拓展"><a href="#拓展" class="headerlink" title="拓展"></a>拓展</h4><p> 要是我通过<code> ForkJoinPool.execute(Runnable) </code> 提交的任务，本身就没有 <code>ForkJoinTask </code>且此方法也没有返回 <code>ForkJoinTask</code> ，这种情况将如何捕获异常呢？</p>
+<p>其实此方法将 Runnable 封装为 ForkJoinTask 的子类，此子类拓展了上面提到的 <code>internalPropagateException(Throwable) </code>异常传播方法，并在其中抛出异常被在上文介绍的 <code>ForkJoinWorkerThread.run()</code>这个方法捕获，并调用 ForkJoinWorkerThread 中<code> onTermination(Throwable exception) </code> 收尾函数，最终都将调用 <code>ForkJoinPool.deregisterWorker(ForkJoinWorkerThread wt, Throwable ex) </code>并在其中抛出。</p>
+<pre><code>try {
+     onTermination(exception); // 可添加自定义处理，但不做捕获
+     } catch (Throwable ex) {
+         if (exception == null)
+             exception = ex;
+     } finally {
+         pool.deregisterWorker(this, exception);// 最终都将抛出异常
+     }</code></pre><p>没人管了？肯定不会的。</p>
+<p>第一部分讲到的<code> Thread.UncaughtExceptionHandler </code>在这里也同样起作用，给 ForkJoinPool 构造函数传入UncaughtExceptionHandler，则所有 <code> ForkJoinWorkerThread </code>都将被设置成此以处理异常（设计得就是这么周到 XD）。当然你要不嫌麻烦选择自定义<code> ForkJoinWorkerThreadFactory </code>也是没问题的</p>
+<pre><code>public ForkJoinPool(int parallelism,
+                    ForkJoinWorkerThreadFactory factory,
+                    UncaughtExceptionHandler handler,
+                    boolean asyncMode) {
+    this(checkParallelism(parallelism),
+         checkFactory(factory),
+         handler,
+         asyncMode ? FIFO_QUEUE : LIFO_QUEUE,
+         &quot;ForkJoinPool-&quot; + nextPoolId() + &quot;-worker-&quot;);
+    checkPermission();
+}</code></pre>
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>觉得不错不妨打赏一笔</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.png" alt="污力大熊 WeChat Pay">
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    污力大熊
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://zhongm.in/2017/09/20/Analyze-Java-Theadpool-Exception/" title="深度解析Java线程池的异常处理">http://zhongm.in/2017/09/20/Analyze-Java-Theadpool-Exception/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/Java/" rel="tag"><i class="fa fa-tag"></i> Java</a>
+          
+            <a href="/tags/JVM/" rel="tag"><i class="fa fa-tag"></i> JVM</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/08/26/Use-Example-locksupport-And-Wait/" rel="next" title="LockSupport.park 与wait用法示例">
+                <i class="fa fa-chevron-left"></i> LockSupport.park 与wait用法示例
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/10/12/QuickInit-Shell-Script/" rel="prev" title="一键配置脚本（用户添加配置、源修改、ss&BBR安装）">
+                一键配置脚本（用户添加配置、源修改、ss&BBR安装） <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript">
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="污力大熊">
+          <p class="site-author-name" itemprop="name">污力大熊</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">19</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">27</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/single-wolf" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                    
+                      GitHub
+                    
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://zhihu.com/people/ling-hu-chong-39-90/activities" target="_blank" title="ZhiHu">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                    
+                      ZhiHu
+                    
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-block">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://github.com/single-wolf" title="GitHub" target="_blank">GitHub</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#1、ThreadPoolExecutor"><span class="nav-number">1.</span> <span class="nav-text">1、ThreadPoolExecutor</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#问题："><span class="nav-number">1.1.</span> <span class="nav-text">问题：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#源码解析："><span class="nav-number">1.2.</span> <span class="nav-text">源码解析：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#submit-的方式"><span class="nav-number">1.3.</span> <span class="nav-text">submit() 的方式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#submit-解决方式"><span class="nav-number">1.4.</span> <span class="nav-text">submit() 解决方式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#execute-方式："><span class="nav-number">1.5.</span> <span class="nav-text">execute() 方式：</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#execute-解决方式"><span class="nav-number">1.6.</span> <span class="nav-text">execute() 解决方式</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2、ForkJoinPool"><span class="nav-number">2.</span> <span class="nav-text">2、ForkJoinPool</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#跟踪捕获"><span class="nav-number">2.1.</span> <span class="nav-text">跟踪捕获</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#抛出异常"><span class="nav-number">2.2.</span> <span class="nav-text">抛出异常</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#拓展"><span class="nav-number">2.3.</span> <span class="nav-text">拓展</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">污力大熊</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+  
+  <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.2"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.2"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'manual') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+  
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        }
+      });
+    </script>
+
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+      });
+    </script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script><!-- hexo-inject:begin --><!-- Begin: Injected MathJax -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config("");
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="custom_mathjax_source">
+</script>
+<!-- End: Injected MathJax -->
+<!-- hexo-inject:end -->
+  
+
+
+  
+
+  
+
+</body>
+</html>

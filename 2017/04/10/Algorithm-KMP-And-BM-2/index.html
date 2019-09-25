@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="zh-Hans">
+<head><meta name="generator" content="Hexo 3.9.0">
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#222">
+
+
+
+  
+  
+    
+    
+  <script src="/lib/pace/pace.min.js?v=1.0.2"></script>
+  <link href="/lib/pace/pace-theme-minimal.min.css?v=1.0.2" rel="stylesheet">
+
+
+
+
+  
+  
+  <link rel="stylesheet" media="all" href="/lib/Han/dist/han.min.css?v=3.3">
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css">
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=5.1.2" rel="stylesheet" type="text/css">
+
+
+  <meta name="keywords" content="算法,">
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="污力大熊的博客" type="application/atom+xml">
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/images/favicon.ico?v=5.1.2">
+
+
+
+
+
+
+<meta name="description" content="继上篇KMP、BM算法（上），这篇中的BM算法比KMP算法的效率更高，构思精巧。但是算法实现起来也更困难，更难以理解。">
+<meta name="keywords" content="算法">
+<meta property="og:type" content="article">
+<meta property="og:title" content="KMP、BM算法（下）">
+<meta property="og:url" content="http://zhongm.in/2017/04/10/Algorithm-KMP-And-BM-2/index.html">
+<meta property="og:site_name" content="污力大熊的博客">
+<meta property="og:description" content="继上篇KMP、BM算法（上），这篇中的BM算法比KMP算法的效率更高，构思精巧。但是算法实现起来也更困难，更难以理解。">
+<meta property="og:locale" content="zh-Hans">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM_.jpg">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM1.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM2.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM3.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM2.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM5.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM6.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM7.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM8.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM9.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM10.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM14.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM11.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM12.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM13.png">
+<meta property="og:image" content="http://zhongm.in/images/2017/04/BM15.png">
+<meta property="og:updated_time" content="2019-07-13T13:51:18.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="KMP、BM算法（下）">
+<meta name="twitter:description" content="继上篇KMP、BM算法（上），这篇中的BM算法比KMP算法的效率更高，构思精巧。但是算法实现起来也更困难，更难以理解。">
+<meta name="twitter:image" content="http://zhongm.in/images/2017/04/BM_.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://zhongm.in/2017/04/10/Algorithm-KMP-And-BM-2/">
+
+
+
+
+
+  <title>KMP、BM算法（下） | 污力大熊的博客</title><!-- hexo-inject:begin --><!-- hexo-inject:end -->
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+  
+    
+  
+
+  <!-- hexo-inject:begin --><!-- hexo-inject:end --><div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">污力大熊的博客</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <h1 class="site-subtitle" itemprop="description"></h1>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br>
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br>
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br>
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br>
+            
+            标签
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-about">
+          <a href="/about" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-user"></i> <br>
+            
+            关于
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br>
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocomplete="off" placeholder="搜索..." spellcheck="false" type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://zhongm.in/2017/04/10/Algorithm-KMP-And-BM-2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="污力大熊">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="/images/avatar.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="污力大熊的博客">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h2 class="post-title" itemprop="name headline">KMP、BM算法（下）</h2>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-10T21:27:42+08:00">
+                2017-04-10
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/随笔/" itemprop="url" rel="index">
+                    <span itemprop="name">随笔</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                
+                  <span class="post-meta-divider">|</span>
+                
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  2,456 字
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  11 分钟
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>继上篇KMP、BM算法（上），这篇中的BM算法比KMP算法的效率更高，构思精巧。但是算法实现起来也更困难，更难以理解。</p>
+<p><img src="/images/2017/04/BM_.jpg" alt></p>
+<a id="more"></a>
+
+<p>可以先简单了解大概思想：阮一峰 <a href="http://www.ruanyifeng.com/blog/2013/05/boyer-moore_string_search_algorithm.html" target="_blank" rel="noopener">http://www.ruanyifeng.com/blog/2013/05/boyer-moore_string_search_algorithm.html</a></p>
+<h1 id="一：算法思想："><a href="#一：算法思想：" class="headerlink" title="一：算法思想："></a><strong>一：算法思想：</strong></h1><blockquote>
+<p>图片转载来自 Alexia <a href="http://www.cnblogs.com/lanxuezaipiao/p/3452579.html" target="_blank" rel="noopener">http://www.cnblogs.com/lanxuezaipiao/p/3452579.html</a><br><strong>前提：假设文本串text长度为n，模式串pattern长度为m，从右走往左匹配</strong></p>
+</blockquote>
+<p>1、</p>
+<ul>
+<li>第一步，将pattern 从右往左匹配，发现最后一个字符 c 与 d 不匹配。我们称这样不匹配的字符为“坏字符”（text 红色）。而且 pattern 中并没有 d ，于是我们知道需将 pattern 右移长度m 即 5 以重新匹配。（右移1、2、3、4也不会匹配，聪明的你肯定想到了）</li>
+<li>现在到达 BM 行位置，再从右往左匹配，发现最后一个字符 c 与 b 不匹配。对的，这个时候 b 就是“坏字符”。然而这pattern 中包含了 b ，我们就可以直接将pattern 移动到其中的 b与“坏字符”对应的位置（聪明的你肯定看出来了），但是pattern 中有两个 b，移动就需要选择近的那个避免漏掉。<br><img src="/images/2017/04/BM1.png" alt></li>
+</ul>
+<p>2、在继续前面的移动后，可以看到在BM行中从右到左匹配，符合匹配的依次是c、a、b 但是之后发现pattern 中的a 并不匹配 b。如果这时依然使用之前的策略，将其移动到 之后对应的b 的位置，反而走了回头路，这样我们就需要将pattern  右移一步。<strong>这就是其中的“坏字符”算法思想</strong></p>
+<p><img src="/images/2017/04/BM2.png" alt></p>
+<p>3、</p>
+<ul>
+<li>再接着看下面，在使用一次“坏字符”算法后，BM 行从右往左发现 pattern 中依次为 b、a是匹配的，之后  b不匹配 a时，运用上面的“坏字符”算法，我们可以右移一位。（这样当然也可以）</li>
+<li>但是这次，我们需要利用起已经匹配的 “ab” 两个字符，就叫它“好后缀”。在pattern 中发现在其中有和“好后缀”匹配的 “ab”，于是我们就可以将pattern 右移使得其对应的位置。<strong>这就是其中的“好后缀” 算法思想</strong><br><img src="/images/2017/04/BM3.png" alt></li>
+</ul>
+<p>4、</p>
+<ul>
+<li>接着看下面这个，在使用一次“坏字符”算法后，BM 行从右往左发现 pattern 中依次为 c、a、b是匹配的，之后  a 不匹配 b时，”bac” 是 “好后缀”，但是pattern 中并没有和其相匹配的其他串了，这时我们再用回“坏字符”算法”，但是又得注意不往左移动。（再怎么拼凑，左移注定没有意义的）<br><img src="/images/2017/04/BM2.png" alt></li>
+</ul>
+<p>这便是BM算法中核心的两个算法思想：“坏字符”和“好后缀”算法。BM算法中，每一步的移动步数就是这两种算法中的最大值。</p>
+<h1 id="二：算法情况探讨："><a href="#二：算法情况探讨：" class="headerlink" title="二：算法情况探讨："></a>二：算法情况探讨：</h1><h3 id="（1）坏字符算法"><a href="#（1）坏字符算法" class="headerlink" title="（1）坏字符算法"></a>（1）坏字符算法</h3><p>当出现一个坏字符时, BM算法向右移动模式串, 让模式串中最靠右的对应字符与坏字符相对，然后继续匹配。坏字符算法有两种情况。（为什么是最靠右？往最靠右相对不是有左移的情况吗？是的，但这由<strong>第二个算法限制它不左移动</strong>，别急）</p>
+<p><strong>y 为文本串，x 为模式串，shift 为移动步数，u 有已匹配的串。</strong></p>
+<p>情况一：</p>
+<p><img src="/images/2017/04/BM5.png" alt></p>
+<p>情况二：</p>
+<p><img src="/images/2017/04/BM6.png" alt></p>
+<h3 id="（2）好后缀算法"><a href="#（2）好后缀算法" class="headerlink" title="（2）好后缀算法"></a>（2）好后缀算法</h3><p>情况一：模式串中有子串和好后缀完全匹配，则将最靠右的那个子串移动到好后缀的位置继续进行匹配。</p>
+<p><img src="/images/2017/04/BM7.png" alt></p>
+<p>情况二：如果不存在和好后缀完全匹配的子串，则在好后缀中找到具有如下特征的最长子串,使得P[m-s…m]=P[0…s]。（P[]为pattern ）</p>
+<p><img src="/images/2017/04/BM8.png" alt></p>
+<p>情况三：如果完全不存在和好后缀匹配的子串，则右移整个模式串。shift=m。</p>
+<p><strong>BM算法中，每一步的向右移动的步数都是这两种算法中的最大值。（不往左移动）</strong></p>
+<h1 id="三：算法实现："><a href="#三：算法实现：" class="headerlink" title="三：算法实现："></a>三：算法实现：</h1><p>使用坏字符算法计算pattern需要右移的距离，存放在bmBc[]，而按好后缀算法计算pattern右移的距离则要存放在bmGs[]。下面讲下怎么计算bmBc[]和bmGs[]这两个预处理数组。</p>
+<h3 id="（1）计算数组bmBc-："><a href="#（1）计算数组bmBc-：" class="headerlink" title="（1）计算数组bmBc[ ]："></a>（1）计算数组bmBc[ ]：</h3><p>我们使用字符作为下标而不是位置数字作为下标。<strong>bmBc[字符] 对应的数组值即是该字符离pattern 最右端的距离</strong>，但如果是纯8位字符也只需要256个空间大小，而且对于大模式，可能本身长度就超过了256，所以这样做是值得的（这也是为什么数据越大，BM算法越高效的原因之一）。</p>
+<p><img src="/images/2017/04/BM9.png" alt></p>
+<p>bmBc[]的计算分两种情况，与前一一对应。</p>
+<p>情况一：字符在模式串中有出现，bmBc[‘v’]表示字符v在模式串中最后一次出现的位置，距离模式串串尾的长度，如上图所示。</p>
+<p>情况二：字符在模式串中没有出现，如模式串中没有字符v，则bmBc[‘v’] = strlen(pattern)。</p>
+<p>写成代码也非常简单：</p>
+<pre class="lang:c decode:true" title="bmBc">void PreBmBc(char *pattern, int m, int bmBc[])
+{
+    int i;
+    for(i = 0; i &lt; 256; i++)
+        bmBc[i] = m;
+    for(i = 0; i &lt; m - 1; i++)//i&lt;m-1避免bmBc[m-1]=0
+        bmBc[pattern[i]] = m - 1 - i;
+}</pre>
+<p>图中v是text中的坏字符（对应位置i+j）,在pattern中对应不匹配的位置为i，那么pattern实际要右移的距离就是：bmBc[‘v’] - m + 1 + i。(没错可能为负数)</p>
+<h3 id><a href="#" class="headerlink" title></a><img src="/images/2017/04/BM10.png" alt></h3><h3 id="（2）计算bmGs-数组"><a href="#（2）计算bmGs-数组" class="headerlink" title="（2）计算bmGs[ ]数组"></a>（2）计算bmGs[ ]数组</h3><p>这里的bmGs[]的下标，是数字而不是字符了，是字符在pattern中位置，<strong>bmGs[ i ]应表示在 pattern 中当“好后缀”前不匹配位置在i 时，模式串应移动的距离</strong>。假设好后缀长度用数组suff[ ]表示。我们需要先把这个辅助数组suff[ ]求出。</p>
+<p>而<strong>数组suff[ i ]表示pattern中以 i 位置字符为后缀和以最后一个字符为后缀的公共后缀串的长度</strong>。（好吧，需要举一个栗子）</p>
+<pre class="lang:c# decode:true" title="suff">suffix[m-1] = m;//m为pattern长度
+suffix[i] = k  
+    for [ pattern[i-k+1] ....,pattern[i]] == [pattern[m-1-k+1]，pattern[m-1]]</pre>
+<p>i     :            0 1   2 3 4  5  6 7<br>pattern: b c  a b a  b  a  b</p>
+<ul>
+<li>当i=7时，按定义suff[7] = strlen(pattern) = 8</li>
+<li>当i=6时，以pattern[6]为后缀的后缀串为bcababa，以最后一个字符b为后缀的后缀串为bcababab，两者没有公共后缀串，所以suff[6] = 0</li>
+<li>当i=5时，以pattern[5]为后缀的后缀串为bcabab，以最后一个字符b为后缀的后缀串为bcababab，两者的公共后缀串为abab，所以suff[5] = 4</li>
+<li>以此类推，当i=0时，以pattern[0]为后缀的后缀串为b，以最后一个字符b为后缀的后缀串为bcababab，两者的公共后缀串为b，所以suff[0] = 1<pre class="lang:c decode:true" title="suffixs">void suffix(char *pattern, int m, int suff[])\\生成suff[ ]数组
+{
+int i,j;
+suff[m - 1] = m;
+for(i = m - 2; i &gt;= 0; i--)
+{
+    j = i;
+    while(j &gt;= 0 &amp;&amp; pattern[j] == pattern[m - 1 - i + j]) 
+        j--;
+    suff[i] = i - j;
+}
+}</pre>
+另一种改进算法就是利用了已经得到的suff[ ]值，计算现在正在计算的suff[]值。</li>
+</ul>
+<p>i 是当前正准备计算suff[]值的那个位置。f 是上一个成功进行匹配的起始位置。g 是上一次进行成功匹配的失配位置。</p>
+<p>若 i 在 g 和 f 之间，那么一定有P[i]=P[m-1-f+i]（P[ ]为pattern）；并且如果suff[m-1-f+i] &lt; i-g, 则suff[i] = suff[m-1-f+i]，这不就利用了前面的suff了吗。（难以理解需中再熟悉suff[ ]定义）</p>
+<p><img src="/images/2017/04/BM14.png" alt></p>
+<pre class="lang:c decode:true " title="suffixes">void suffixes(char *x, int m, int *suff) {
+   int f, g, i;
+   suff[m - 1] = m;
+   g = m - 1;
+   for (i = m - 2; i &gt;= 0; --i) {
+      if (i &gt; g &amp;&amp; suff[i + m - 1 - f] &lt; i - g)
+         suff[i] = suff[i + m - 1 - f];
+      else {
+         if (i &lt; g)
+            g = i;
+         f = i;
+         while (g &gt;= 0 &amp;&amp; x[g] == x[g + m - 1 - f])
+            --g;
+         suff[i] = f - g;
+      }
+   }
+}</pre>
+<p>求出辅助数组suff[ ]后，再来讨论号后缀的几种情况中bmGs[ ]的值。</p>
+<p>情况一：<img src="/images/2017/04/BM11.png" alt></p>
+<p>情况二：</p>
+<p><img src="/images/2017/04/BM12.png" alt></p>
+<p>情况三：</p>
+<p><img src="/images/2017/04/BM13.png" alt></p>
+<pre class="lang:c decode:true" title="preBmGs">void preBmGs(char *x, int m, int bmGs[]) {
+   int i, j, suff[XSIZE];
+   suffixes(x, m, suff);//计算suff[ ]
+   for (i = 0; i &lt; m; ++i)//情况三
+      bmGs[i] = m;
+   j = 0;
+   for (i = m - 1; i &gt;= 0; --i)//情况二
+         for (; j &lt; m - 1 - i; ++j)
+            if (bmGs[j] == m)
+               bmGs[j] = m - 1 - i;
+   for (i = 0; i &lt;= m - 2; ++i)//情况一
+      bmGs[m - 1 - suff[i]] = m - 1 - i;
+}</pre>
+<p>再举一个栗子：</p>
+<p><img src="/images/2017/04/BM15.png" alt></p>
+<pre class="lang:c decode:true" title="BM">//完整代码
+#include &lt;stdio.h&gt;
+#include &lt;string.h&gt;
+
+#define SIZE 256
+#define MAX(x, y) (x) &gt; (y) ? (x) : (y)
+#define ASIZE 256 
+#define XSIZE 256
+
+void BoyerMoore(char *pattern, int m, char *text, int n);
+
+int main()
+{
+    char text[256], pattern[256];
+
+    while(1)
+    {
+        scanf("%s%s", text, pattern);
+        if(text == 0 || pattern == 0) break;
+        BoyerMoore(pattern, strlen(pattern), text, strlen(text));
+    }
+
+    return 0;
+}
+
+void preBmBc(char *x, int m, int bmBc[]){
+// void PreBmBc(char *pattern, int m, int bmBc[]) {
+   int i;
+
+   for (i = 0; i &lt; ASIZE; ++i)
+      bmBc[i] = m;
+   for (i = 0; i &lt; m - 1; ++i)
+      bmBc[x[i]] = m - i - 1;
+}
+
+void suffixes(char *x, int m, int *suff) {
+   int f, g, i;
+
+   suff[m - 1] = m;
+   g = m - 1;
+   for (i = m - 2; i &gt;= 0; --i) {
+      if (i &gt; g &amp;&amp; suff[i + m - 1 - f] &lt; i - g)
+         suff[i] = suff[i + m - 1 - f];
+      else {
+         if (i &lt; g)
+            g = i;
+         f = i;
+         while (g &gt;= 0 &amp;&amp; x[g] == x[g + m - 1 - f])
+            --g;
+         suff[i] = f - g;
+      }
+   }
+}
+
+void preBmGs(char *x, int m, int bmGs[]) {
+   int i, j, suff[XSIZE];
+
+   suffixes(x, m, suff);
+
+   for (i = 0; i &lt; m; ++i)
+      bmGs[i] = m;
+   j = 0;
+   for (i = m - 1; i &gt;= 0; --i)
+      if (suff[i] == i + 1)
+         for (; j &lt; m - 1 - i; ++j)
+            if (bmGs[j] == m)
+               bmGs[j] = m - 1 - i;
+   for (i = 0; i &lt;= m - 2; ++i)
+      bmGs[m - 1 - suff[i]] = m - 1 - i;
+}
+void BoyerMoore(char *pattern, int m, char *text, int n)
+{
+    int i, j, bmBc[ASIZE], bmGs[XSIZE];
+
+    // Preprocessing
+    preBmBc(pattern, m, bmBc);
+    preBmGs(pattern, m, bmGs);
+
+    // Searching
+    j = 0;
+    while(j &lt;= n - m)
+    {
+        for(i = m - 1; i &gt;= 0 &amp;&amp; pattern[i] == text[i + j]; i--);
+        if(i &lt; 0)
+        {
+            printf("The position is %d\n", j);
+            j += bmGs[0];
+            return;
+        }
+        else
+        {
+            j += MAX(bmBc[text[i + j]] - m + 1 + i, bmGs[i]);
+        }
+    }
+
+    printf("No find.\n");
+}</pre>
+<p>&nbsp;</p>
+<p>参考资料：</p>
+<p>Boyer-Moore algorithm <a href="http://igm.univ-mlv.fr/~lecroq/string/node14.html" target="_blank" rel="noopener">http://igm.univ-mlv.fr/~lecroq/string/node14.html</a></p>
+<p><a href="http://weibo.com/lanxuezaipiao/" target="_blank" rel="noopener">Alexia(minmin) </a>   <a href="http://www.cnblogs.com/lanxuezaipiao/p/3452579.html" target="_blank" rel="noopener">http://www.cnblogs.com/lanxuezaipiao/p/3452579.html</a></p>
+<p>阮一峰 <a href="http://www.ruanyifeng.com/blog/2013/05/boyer-moore_string_search_algorithm.html" target="_blank" rel="noopener">http://www.ruanyifeng.com/blog/2013/05/boyer-moore_string_search_algorithm.html</a></p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+      <div>
+        <div style="padding: 10px 0; margin: 20px auto; width: 90%; text-align: center;">
+  <div>觉得不错不妨打赏一笔</div>
+  <button id="rewardButton" disable="enable" onclick="var qr = document.getElementById('QR'); if (qr.style.display === 'none') {qr.style.display='block';} else {qr.style.display='none'}">
+    <span>Donate</span>
+  </button>
+  <div id="QR" style="display: none;">
+
+    
+      <div id="wechat" style="display: inline-block">
+        <img id="wechat_qr" src="/images/wechatpay.png" alt="污力大熊 WeChat Pay">
+        <p>WeChat Pay</p>
+      </div>
+    
+
+    
+
+    
+
+  </div>
+</div>
+
+      </div>
+    
+
+    
+      <div>
+        <ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者：</strong>
+    污力大熊
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://zhongm.in/2017/04/10/Algorithm-KMP-And-BM-2/" title="KMP、BM算法（下）">http://zhongm.in/2017/04/10/Algorithm-KMP-And-BM-2/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/3.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 3.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+      </div>
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/算法/" rel="tag"><i class="fa fa-tag"></i> 算法</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2017/04/07/Algorithm-KMP-And-BM-1/" rel="next" title="KMP、BM算法（上）">
+                <i class="fa fa-chevron-left"></i> KMP、BM算法（上）
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2017/04/15/Linux-Advanced-Notes/" rel="prev" title="Linux 进阶小记">
+                Linux 进阶小记 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        <!-- JiaThis Button BEGIN -->
+<div class="jiathis_style">
+  <a class="jiathis_button_tsina"></a>
+  <a class="jiathis_button_tqq"></a>
+  <a class="jiathis_button_weixin"></a>
+  <a class="jiathis_button_cqq"></a>
+  <a class="jiathis_button_douban"></a>
+  <a class="jiathis_button_renren"></a>
+  <a class="jiathis_button_qzone"></a>
+  <a class="jiathis_button_kaixin001"></a>
+  <a class="jiathis_button_copy"></a>
+  <a href="http://www.jiathis.com/share" class="jiathis jiathis_txt jiathis_separator jtico jtico_jiathis" target="_blank"></a>
+  <a class="jiathis_counter_style"></a>
+</div>
+<script type="text/javascript">
+  var jiathis_config={
+    hideMore:false
+  }
+</script>
+<script type="text/javascript" src="http://v3.jiathis.com/code/jia.js" charset="utf-8"></script>
+<!-- JiaThis Button END -->
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image" src="/images/avatar.jpg" alt="污力大熊">
+          <p class="site-author-name" itemprop="name">污力大熊</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+           
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">19</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">27</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a href="https://github.com/single-wolf" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                    
+                      GitHub
+                    
+                </a>
+              </span>
+            
+              <span class="links-of-author-item">
+                <a href="https://zhihu.com/people/ling-hu-chong-39-90/activities" target="_blank" title="ZhiHu">
+                  
+                    <i class="fa fa-fw fa-globe"></i>
+                  
+                    
+                      ZhiHu
+                    
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-block">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              Links
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a href="https://github.com/single-wolf" title="GitHub" target="_blank">GitHub</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#一：算法思想："><span class="nav-number">1.</span> <span class="nav-text">一：算法思想：</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#二：算法情况探讨："><span class="nav-number">2.</span> <span class="nav-text">二：算法情况探讨：</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#（1）坏字符算法"><span class="nav-number">2.0.1.</span> <span class="nav-text">（1）坏字符算法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#（2）好后缀算法"><span class="nav-number">2.0.2.</span> <span class="nav-text">（2）好后缀算法</span></a></li></ol></li></ol><li class="nav-item nav-level-1"><a class="nav-link" href="#三：算法实现："><span class="nav-number">3.</span> <span class="nav-text">三：算法实现：</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#（1）计算数组bmBc-："><span class="nav-number">3.0.1.</span> <span class="nav-text">（1）计算数组bmBc[ ]：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#null"><span class="nav-number">3.0.2.</span> <span class="nav-text"></span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#（2）计算bmGs-数组"><span class="nav-number">3.0.3.</span> <span class="nav-text">（2）计算bmGs[ ]数组</span></a></li></ol></li></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">
+  
+  &copy;  2016 - 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">污力大熊</span>
+</div>
+
+
+<div class="powered-by">
+  由 <a class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Muse
+  </a>
+</div>
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+  
+  <script type="text/javascript" src="/lib/canvas-nest/canvas-nest.min.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.2"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.2"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    var isXml = true;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length === 0) {
+      search_path = "search.xml";
+    } else if (/json$/i.test(search_path)) {
+      isXml = false;
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    var onPopupClose = function (e) {
+      $('.popup').hide();
+      $('#local-search-input').val('');
+      $('.search-result-list').remove();
+      $('#no-result').remove();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    }
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.search-popup-overlay').click(onPopupClose);
+      $('.popup').toggle();
+      var $localSearchInput = $('#local-search-input');
+      $localSearchInput.attr("autocapitalize", "none");
+      $localSearchInput.attr("autocorrect", "off");
+      $localSearchInput.focus();
+    }
+
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+
+      // start loading animation
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay">' +
+          '<div id="search-loading-icon">' +
+          '<i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>' +
+          '</div>' +
+          '</div>')
+        .css('overflow', 'hidden');
+      $("#search-loading-icon").css('margin', '20% auto 0 auto').css('text-align', 'center');
+
+      $.ajax({
+        url: path,
+        dataType: isXml ? "xml" : "json",
+        async: true,
+        success: function(res) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = isXml ? $("entry", res).map(function() {
+            return {
+              title: $("title", this).text(),
+              content: $("content",this).text(),
+              url: $("url" , this).text()
+            };
+          }).get() : res;
+          var input = document.getElementById(search_id);
+          var resultContent = document.getElementById(content_id);
+          var inputEventFunction = function() {
+            var searchText = input.value.trim().toLowerCase();
+            var keywords = searchText.split(/[\s\-]+/);
+            if (keywords.length > 1) {
+              keywords.push(searchText);
+            }
+            var resultItems = [];
+            if (searchText.length > 0) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var hitCount = 0;
+                var searchTextCount = 0;
+                var title = data.title.trim();
+                var titleInLowerCase = title.toLowerCase();
+                var content = data.content.trim().replace(/<[^>]+>/g,"");
+                var contentInLowerCase = content.toLowerCase();
+                var articleUrl = decodeURIComponent(data.url);
+                var indexOfTitle = [];
+                var indexOfContent = [];
+                // only match articles with not empty titles
+                if(title != '') {
+                  keywords.forEach(function(keyword) {
+                    function getIndexByWord(word, text, caseSensitive) {
+                      var wordLen = word.length;
+                      if (wordLen === 0) {
+                        return [];
+                      }
+                      var startPosition = 0, position = [], index = [];
+                      if (!caseSensitive) {
+                        text = text.toLowerCase();
+                        word = word.toLowerCase();
+                      }
+                      while ((position = text.indexOf(word, startPosition)) > -1) {
+                        index.push({position: position, word: word});
+                        startPosition = position + wordLen;
+                      }
+                      return index;
+                    }
+
+                    indexOfTitle = indexOfTitle.concat(getIndexByWord(keyword, titleInLowerCase, false));
+                    indexOfContent = indexOfContent.concat(getIndexByWord(keyword, contentInLowerCase, false));
+                  });
+                  if (indexOfTitle.length > 0 || indexOfContent.length > 0) {
+                    isMatch = true;
+                    hitCount = indexOfTitle.length + indexOfContent.length;
+                  }
+                }
+
+                // show search results
+
+                if (isMatch) {
+                  // sort index by position of keyword
+
+                  [indexOfTitle, indexOfContent].forEach(function (index) {
+                    index.sort(function (itemLeft, itemRight) {
+                      if (itemRight.position !== itemLeft.position) {
+                        return itemRight.position - itemLeft.position;
+                      } else {
+                        return itemLeft.word.length - itemRight.word.length;
+                      }
+                    });
+                  });
+
+                  // merge hits into slices
+
+                  function mergeIntoSlice(text, start, end, index) {
+                    var item = index[index.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    var hits = [];
+                    var searchTextCountInSlice = 0;
+                    while (position + word.length <= end && index.length != 0) {
+                      if (word === searchText) {
+                        searchTextCountInSlice++;
+                      }
+                      hits.push({position: position, length: word.length});
+                      var wordEnd = position + word.length;
+
+                      // move to next position of hit
+
+                      index.pop();
+                      while (index.length != 0) {
+                        item = index[index.length - 1];
+                        position = item.position;
+                        word = item.word;
+                        if (wordEnd > position) {
+                          index.pop();
+                        } else {
+                          break;
+                        }
+                      }
+                    }
+                    searchTextCount += searchTextCountInSlice;
+                    return {
+                      hits: hits,
+                      start: start,
+                      end: end,
+                      searchTextCount: searchTextCountInSlice
+                    };
+                  }
+
+                  var slicesOfTitle = [];
+                  if (indexOfTitle.length != 0) {
+                    slicesOfTitle.push(mergeIntoSlice(title, 0, title.length, indexOfTitle));
+                  }
+
+                  var slicesOfContent = [];
+                  while (indexOfContent.length != 0) {
+                    var item = indexOfContent[indexOfContent.length - 1];
+                    var position = item.position;
+                    var word = item.word;
+                    // cut out 100 characters
+                    var start = position - 20;
+                    var end = position + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if (end < position + word.length) {
+                      end = position + word.length;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    slicesOfContent.push(mergeIntoSlice(content, start, end, indexOfContent));
+                  }
+
+                  // sort slices in content by search text's count and hits' count
+
+                  slicesOfContent.sort(function (sliceLeft, sliceRight) {
+                    if (sliceLeft.searchTextCount !== sliceRight.searchTextCount) {
+                      return sliceRight.searchTextCount - sliceLeft.searchTextCount;
+                    } else if (sliceLeft.hits.length !== sliceRight.hits.length) {
+                      return sliceRight.hits.length - sliceLeft.hits.length;
+                    } else {
+                      return sliceLeft.start - sliceRight.start;
+                    }
+                  });
+
+                  // select top N slices in content
+
+                  var upperBound = parseInt('1');
+                  if (upperBound >= 0) {
+                    slicesOfContent = slicesOfContent.slice(0, upperBound);
+                  }
+
+                  // highlight title and content
+
+                  function highlightKeyword(text, slice) {
+                    var result = '';
+                    var prevEnd = slice.start;
+                    slice.hits.forEach(function (hit) {
+                      result += text.substring(prevEnd, hit.position);
+                      var end = hit.position + hit.length;
+                      result += '<b class="search-keyword">' + text.substring(hit.position, end) + '</b>';
+                      prevEnd = end;
+                    });
+                    result += text.substring(prevEnd, slice.end);
+                    return result;
+                  }
+
+                  var resultItem = '';
+
+                  if (slicesOfTitle.length != 0) {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + highlightKeyword(title, slicesOfTitle[0]) + "</a>";
+                  } else {
+                    resultItem += "<li><a href='" + articleUrl + "' class='search-result-title'>" + title + "</a>";
+                  }
+
+                  slicesOfContent.forEach(function (slice) {
+                    resultItem += "<a href='" + articleUrl + "'>" +
+                      "<p class=\"search-result\">" + highlightKeyword(content, slice) +
+                      "...</p>" + "</a>";
+                  });
+
+                  resultItem += "</li>";
+                  resultItems.push({
+                    item: resultItem,
+                    searchTextCount: searchTextCount,
+                    hitCount: hitCount,
+                    id: resultItems.length
+                  });
+                }
+              })
+            };
+            if (keywords.length === 1 && keywords[0] === "") {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>'
+            } else if (resultItems.length === 0) {
+              resultContent.innerHTML = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>'
+            } else {
+              resultItems.sort(function (resultLeft, resultRight) {
+                if (resultLeft.searchTextCount !== resultRight.searchTextCount) {
+                  return resultRight.searchTextCount - resultLeft.searchTextCount;
+                } else if (resultLeft.hitCount !== resultRight.hitCount) {
+                  return resultRight.hitCount - resultLeft.hitCount;
+                } else {
+                  return resultRight.id - resultLeft.id;
+                }
+              });
+              var searchResultList = '<ul class=\"search-result-list\">';
+              resultItems.forEach(function (result) {
+                searchResultList += result.item;
+              })
+              searchResultList += "</ul>";
+              resultContent.innerHTML = searchResultList;
+            }
+          }
+
+          if ('auto' === 'manual') {
+            input.addEventListener('input', inputEventFunction);
+          } else {
+            $('.search-icon').click(inputEventFunction);
+            input.addEventListener('keypress', function (event) {
+              if (event.keyCode === 13) {
+                inputEventFunction();
+              }
+            });
+          }
+
+          // remove loading animation
+          $(".local-search-pop-overlay").remove();
+          $('body').css('overflow', '');
+
+          proceedsearch();
+        }
+      });
+    }
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched === false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(onPopupClose);
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+    $(document).on('keyup', function (event) {
+      var shouldDismissSearchPopup = event.which === 27 &&
+        $('.search-popup').is(':visible');
+      if (shouldDismissSearchPopup) {
+        onPopupClose();
+      }
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+
+  
+  
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        }
+      });
+    </script>
+
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+      });
+    </script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script><!-- hexo-inject:begin --><!-- Begin: Injected MathJax -->
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config("");
+</script>
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Queue(function() {
+    var all = MathJax.Hub.getAllJax(), i;
+    for(i=0; i < all.length; i += 1) {
+      all[i].SourceElement().parentNode.className += ' has-jax';
+    }
+  });
+</script>
+
+<script type="text/javascript" src="custom_mathjax_source">
+</script>
+<!-- End: Injected MathJax -->
+<!-- hexo-inject:end -->
+  
+
+
+  
+
+  
+
+</body>
+</html>
